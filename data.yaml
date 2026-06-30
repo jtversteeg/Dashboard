@@ -1,0 +1,21 @@
+title: "Wide Dashboard"
+
+spotify:
+  type: playlist
+  id: 37i9dQZF1DXcBWIGoYBM5M
+
+pomodoro:
+  work: 25
+  shortBreak: 5
+  longBreak: 15
+  cycles: 4
+  autoStart: false
+
+calendar:
+  enableAgenda: true
+
+todo:
+  - text: "Finish report"
+    done: false
+  - text: "Team meeting prep"
+    done: true
