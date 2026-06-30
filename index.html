@@ -2,13 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Dashboard</title>
+<title>Smart Dashboard</title>
 
-<!-- YAML parser -->
+<!-- ✅ YAML parser -->
 <script src="https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js"></script>
 
-<!-- Microsoft Auth -->
+<!-- ✅ Microsoft Auth (Outlook) -->
 <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+
+<!-- ✅ Spotify Web Playback SDK -->
+<script src="https://sdk.scdn.co/spotify-player.js"></script>
 
 <style>
 
@@ -30,6 +33,7 @@ html, body {
   height:100%;
 }
 
+/* Each column */
 .column {
   display:flex;
   flex-direction:column;
@@ -39,11 +43,16 @@ html, body {
   border-radius:10px;
 }
 
-/* ---------- TITLES ---------- */
-h2 { font-size:16px; margin:4px 0; }
+/* Titles */
+h2 {
+  font-size:16px;
+  margin:4px 0;
+}
 
 /* ---------- SPOTIFY ---------- */
-.spotify-player { text-align:center; }
+.spotify-player {
+  text-align:center;
+}
 
 /* ---------- POMODORO ---------- */
 .pomodoro-row {
@@ -51,7 +60,10 @@ h2 { font-size:16px; margin:4px 0; }
   justify-content:space-between;
   align-items:center;
 }
-.timer-display { font-size:28px; }
+
+.timer-display {
+  font-size:28px;
+}
 
 /* ---------- AGENDA ---------- */
 .agenda-list {
@@ -76,7 +88,10 @@ h2 { font-size:16px; margin:4px 0; }
   font-size:12px;
 }
 
-.done { text-decoration:line-through; opacity:0.6; }
+.done {
+  text-decoration:line-through;
+  opacity:0.6;
+}
 
 </style>
 </head>
@@ -84,23 +99,30 @@ h2 { font-size:16px; margin:4px 0; }
 
 <div class="dashboard">
 
-  <!-- COLUMN 1 -->
+  <!-- ================= COLUMN 1 ================= -->
   <div class="column">
 
+    <!-- 🎧 Spotify -->
     <div>
       <h2>🎧 Music</h2>
+
       <div class="spotify-player">
         <div id="trackInfo">Not connected</div>
+
+        <!-- Controls -->
         <button onclick="previousTrack()">⏮</button>
         <button onclick="togglePlay()">▶</button>
         <button onclick="nextTrack()">⏭</button>
       </div>
     </div>
 
+    <!-- 🍅 Pomodoro -->
     <div>
       <h2>🍅 Timer</h2>
+
       <div class="pomodoro-row">
         <div id="timer">25:00</div>
+
         <div>
           <button onclick="startTimer()">▶</button>
           <button onclick="pauseTimer()">⏸</button>
@@ -111,95 +133,138 @@ h2 { font-size:16px; margin:4px 0; }
 
   </div>
 
-  <!-- COLUMN 2 -->
+  <!-- ================= COLUMN 2 ================= -->
   <div class="column">
+
+    <!-- Next meeting -->
     <div>
       <h2>⏭ Next</h2>
       <div id="nextMeeting">Loading...</div>
     </div>
 
+    <!-- Agenda -->
     <div>
       <h2>📅 Agenda</h2>
       <div id="agendaList" class="agenda-list"></div>
     </div>
+
   </div>
 
-  <!-- COLUMN 3 -->
+  <!-- ================= COLUMN 3 ================= -->
   <div class="column">
-    <h2>✅ To‑Do</h2>
-    <input id="newTodo" placeholder="Add task">
-    <button onclick="addTodo()">+</button>
-    <ul id="todoList"></ul>
+
+    <div>
+      <h2>✅ To‑Do</h2>
+
+      <input id="newTodo" placeholder="Add task">
+      <button onclick="addTodo()">+</button>
+    </div>
+
+    <ul id="todoList" class="todo-list"></ul>
+
   </div>
 
 </div>
 
-<!-- Spotify SDK -->
-<script src="https://sdk.scdn.co/spotify-player.js"></script>
-
 <script>
 
-/* ---------- LOAD YAML ---------- */
+/* =====================================================
+   ✅ LOAD YAML CONFIG (data.yaml)
+===================================================== */
 async function loadYAML(){
-  const res = await fetch('data.yaml');
-  const text = await res.text();
-  const data = jsyaml.load(text);
-  renderDashboard(data);
+  try {
+    // Cache-busting to ensure real-time updates
+    const res = await fetch('data.yaml?t=' + Date.now());
+    const text = await res.text();
+
+    const data = jsyaml.load(text);
+
+    renderDashboard(data);
+
+  } catch (err) {
+    console.error("YAML load error:", err);
+  }
 }
 
-/* ---------- RENDER ---------- */
+/* =====================================================
+   ✅ MAIN RENDER FUNCTION
+===================================================== */
 function renderDashboard(data){
-  initSpotify(data.spotify);
-  initPomodoro(data.pomodoro);
-  initTodo(data.todo);
-  if(data.calendar?.enableAgenda) fetchAgenda();
+
+  // Spotify
+  if (data.spotify) initSpotify(data.spotify);
+
+  // Pomodoro
+  if (data.pomodoro) initPomodoro(data.pomodoro);
+
+  // To-do
+  if (data.todo) initTodo(data.todo);
+
+  // Outlook
+  if (data.calendar?.enableAgenda) fetchAgenda();
 }
 
-/* ---------- SPOTIFY ---------- */
+/* =====================================================
+   🎧 SPOTIFY WEB SDK
+===================================================== */
 let player, device_id, accessToken;
 
+/* OAuth login redirect */
 function getSpotifyToken(clientId){
   const params = new URLSearchParams({
     response_type:"token",
     client_id:clientId,
-    scope:"streaming user-read-email user-modify-playback-state",
+    scope:"streaming user-modify-playback-state user-read-playback-state",
     redirect_uri:window.location.href
   });
 
-  window.location = "https://accounts.spotify.com/authorize?" + params.toString();
+  window.location = "https://accounts.spotify.com/authorize?" + params;
 }
 
+/* Initialize */
 function initSpotify(cfg){
 
-  // Get token from URL
+  // Extract token from URL after login
   const hash = window.location.hash;
-  if(hash){
+  if (hash) {
     accessToken = new URLSearchParams(hash.substring(1)).get("access_token");
+
+    // Clean URL (important!)
     window.history.replaceState({}, document.title, "/");
   }
 
-  if(!accessToken){
+  // If no token → login
+  if (!accessToken) {
     getSpotifyToken(cfg.clientId);
     return;
   }
 
+  // Wait for SDK ready, then play playlist
+  setTimeout(() => {
+    playPlaylist(cfg.playlist);
+  }, 3000);
 }
 
-/* Spotify ready */
+/* Player ready */
 window.onSpotifyWebPlaybackSDKReady = () => {
 
   player = new Spotify.Player({
     name:"Dashboard Player",
-    getOAuthToken:cb => cb(accessToken)
+    getOAuthToken: cb => cb(accessToken)
   });
 
-  player.addListener('ready', data => {
-    device_id = data.device_id;
+  /* Device ready */
+  player.addListener('ready', ({device_id:id}) => {
+    device_id = id;
+    console.log("Spotify connected:", id);
   });
 
+  /* Track updates */
   player.addListener('player_state_changed', state => {
-    if(!state) return;
+    if (!state) return;
+
     const track = state.track_window.current_track;
+
     document.getElementById("trackInfo").textContent =
       track.name + " - " + track.artists[0].name;
   });
@@ -207,7 +272,7 @@ window.onSpotifyWebPlaybackSDKReady = () => {
   player.connect();
 };
 
-/* Playback */
+/* Playback controls */
 function playPlaylist(id){
   fetch(`https://api.spotify.com/v1/me/player/play?device_id=${device_id}`, {
     method:"PUT",
@@ -215,16 +280,18 @@ function playPlaylist(id){
       Authorization:`Bearer ${accessToken}`,
       "Content-Type":"application/json"
     },
-    body: JSON.stringify({context_uri:`spotify:playlist:${id}`})
+    body: JSON.stringify({ context_uri:`spotify:playlist:${id}` })
   });
 }
 
-function togglePlay(){ player.togglePlay(); }
-function nextTrack(){ player.nextTrack(); }
-function previousTrack(){ player.previousTrack(); }
+function togglePlay(){ player && player.togglePlay(); }
+function nextTrack(){ player && player.nextTrack(); }
+function previousTrack(){ player && player.previousTrack(); }
 
-/* ---------- POMODORO ---------- */
-let timeLeft, timer;
+/* =====================================================
+   🍅 POMODORO TIMER
+===================================================== */
+let timer, timeLeft;
 
 function initPomodoro(cfg){
   timeLeft = cfg.work * 60;
@@ -232,26 +299,40 @@ function initPomodoro(cfg){
 }
 
 function updateTimer(){
-  let m = Math.floor(timeLeft/60);
-  let s = timeLeft%60;
+  let m = Math.floor(timeLeft / 60);
+  let s = timeLeft % 60;
+
   document.getElementById('timer').textContent =
     `${m}:${String(s).padStart(2,'0')}`;
 }
 
 function startTimer(){
-  if(timer) return;
+  if (timer) return;
+
   timer = setInterval(()=>{
     timeLeft--;
-    if(timeLeft<=0) resetTimer();
+
+    if (timeLeft <= 0) resetTimer();
+
     updateTimer();
-  },1000);
+  }, 1000);
 }
 
-function pauseTimer(){ clearInterval(timer); timer=null; }
-function resetTimer(){ pauseTimer(); timeLeft=25*60; updateTimer(); }
+function pauseTimer(){
+  clearInterval(timer);
+  timer = null;
+}
 
-/* ---------- TODO ---------- */
-let todos=[];
+function resetTimer(){
+  pauseTimer();
+  timeLeft = 25 * 60;
+  updateTimer();
+}
+
+/* =====================================================
+   ✅ TODO LIST
+===================================================== */
+let todos = [];
 
 function initTodo(list){
   todos = list;
@@ -260,19 +341,35 @@ function initTodo(list){
 
 function renderTodos(){
   const el = document.getElementById('todoList');
-  el.innerHTML='';
+  el.innerHTML = '';
+
   todos.forEach((t,i)=>{
-    const li=document.createElement('li');
-    if(t.done) li.classList.add('done');
-    li.innerHTML=`${t.text} <button onclick="deleteTodo(${i})">X</button>`;
+    const li = document.createElement('li');
+
+    if (t.done) li.classList.add('done');
+
+    li.innerHTML = `
+      <span onclick="toggleTodo(${i})">${t.text}</span>
+      <button onclick="deleteTodo(${i})">X</button>
+    `;
+
     el.appendChild(li);
   });
 }
 
 function addTodo(){
   const input = document.getElementById('newTodo');
-  todos.push({text:input.value,done:false});
-  input.value='';
+
+  if (!input.value) return;
+
+  todos.push({text:input.value, done:false});
+  input.value = "";
+
+  renderTodos();
+}
+
+function toggleTodo(i){
+  todos[i].done = !todos[i].done;
   renderTodos();
 }
 
@@ -281,59 +378,91 @@ function deleteTodo(i){
   renderTodos();
 }
 
-/* ---------- OUTLOOK ---------- */
+/* =====================================================
+   📅 OUTLOOK (MICROSOFT GRAPH)
+===================================================== */
 const msalInstance = new msal.PublicClientApplication({
   auth:{
-    clientId:"YOUR_MS_CLIENT_ID",
+    clientId:"YOUR_MS_CLIENT_ID", // 🔑 replace
     redirectUri:window.location.origin
   }
 });
 
 async function login(){
-  const res = await msalInstance.loginPopup({scopes:["Calendars.Read"]});
+  const res = await msalInstance.loginPopup({
+    scopes:["Calendars.Read"]
+  });
   return res.accessToken;
 }
 
 async function fetchAgenda(){
-  const token = await login();
+  try {
+    const token = await login();
 
-  const start = new Date(); start.setHours(0,0,0,0);
-  const end = new Date(); end.setHours(23,59,59,999);
+    const start = new Date(); start.setHours(0,0,0,0);
+    const end = new Date(); end.setHours(23,59,59,999);
 
-  const res = await fetch(
-    `https://graph.microsoft.com/v1.0/me/calendarview?startDateTime=${start.toISOString()}&endDateTime=${end.toISOString()}`,
-    { headers:{Authorization:`Bearer ${token}`} }
-  );
+    const res = await fetch(
+      `https://graph.microsoft.com/v1.0/me/calendarview?startDateTime=${start.toISOString()}&endDateTime=${end.toISOString()}`,
+      { headers:{Authorization:`Bearer ${token}`} }
+    );
 
-  const data = await res.json();
-  renderAgenda(data.value);
+    const data = await res.json();
+
+    renderAgenda(data.value);
+
+  } catch (err) {
+    console.error("Agenda error:", err);
+  }
 }
 
 function renderAgenda(events){
   const agenda = document.getElementById('agendaList');
   const nextBox = document.getElementById('nextMeeting');
 
-  agenda.innerHTML="";
-  let now=new Date(), next=null;
+  agenda.innerHTML = "";
 
-  events.sort((a,b)=>new Date(a.start.dateTime)-new Date(b.start.dateTime))
-  .forEach(e=>{
-    const s = new Date(e.start.dateTime);
-    agenda.innerHTML += `<div>${e.subject} (${s.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})})</div>`;
-    if(!next && s>now) next=e;
-  });
+  let now = new Date();
+  let next = null;
 
-  if(next){
+  events
+    .sort((a,b)=>new Date(a.start.dateTime)-new Date(b.start.dateTime))
+    .forEach(e=>{
+      const s = new Date(e.start.dateTime);
+
+      agenda.innerHTML += `
+        <div>${e.subject} (${s.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})})</div>
+      `;
+
+      if (!next && s > now) next = e;
+    });
+
+  if (next) {
     const s = new Date(next.start.dateTime);
-    nextBox.textContent = `${next.subject} at ${s.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`;
+
+    nextBox.textContent =
+      `${next.subject} at ${s.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
   } else {
     nextBox.textContent = "Free 🎉";
   }
 }
 
-/* ---------- INIT ---------- */
+/* =====================================================
+   🔄 REAL-TIME UPDATES (SMART REFRESH)
+===================================================== */
+
+// Refresh YAML + agenda every minute
+setInterval(() => {
+  loadYAML();
+  fetchAgenda();
+}, 60000);
+
+/* =====================================================
+   🚀 INIT
+===================================================== */
 loadYAML();
 
 </script>
+
 </body>
 </html>
