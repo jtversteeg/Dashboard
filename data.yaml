@@ -1,15 +1,14 @@
 title: "Wide Dashboard"
 
 spotify:
-  type: playlist
-  id: 37i9dQZF1DXcBWIGoYBM5M
+  clientId: "YOUR_SPOTIFY_CLIENT_ID"
+  playlist: "37i9dQZF1DXcBWIGoYBM5M"
 
 pomodoro:
   work: 25
   shortBreak: 5
   longBreak: 15
   cycles: 4
-  autoStart: false
 
 calendar:
   enableAgenda: true
@@ -17,5 +16,5 @@ calendar:
 todo:
   - text: "Finish report"
     done: false
-  - text: "Team meeting prep"
+  - text: "Prepare meeting"
     done: true
