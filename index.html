@@ -2,116 +2,81 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Wide Dashboard</title>
+<title>Dashboard</title>
 
 <!-- YAML parser -->
-https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js
+<script src="https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js"></script>
 
 <!-- Microsoft Auth -->
-https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js
+<script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
 
 <style>
 
 /* ---------- GLOBAL ---------- */
 html, body {
-  margin: 0;
-  height: 400px;          /* fixed height */
-  overflow: hidden;       /* no scroll */
-  font-family: Arial;
-  background: #f5f6fa;
+  margin:0;
+  height:400px;
+  overflow:hidden;
+  font-family:Arial;
+  background:#f5f6fa;
 }
 
-/* ---------- DASHBOARD GRID ---------- */
+/* ---------- LAYOUT ---------- */
 .dashboard {
-  display: grid;
-  grid-template-columns: 1.3fr 1.3fr 1fr;
-  gap: 15px;
-  padding: 10px;
-  height: 100%;
-  box-sizing: border-box;
+  display:grid;
+  grid-template-columns:1.3fr 1.3fr 1fr;
+  gap:15px;
+  padding:10px;
+  height:100%;
 }
 
-/* ---------- COLUMN STYLE ---------- */
 .column {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  background: white;
-  padding: 10px;
-  border-radius: 10px;
-  overflow: hidden;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  background:white;
+  padding:10px;
+  border-radius:10px;
 }
 
-/* Titles */
-h2 {
-  font-size: 16px;
-  margin: 4px 0;
-}
+/* ---------- TITLES ---------- */
+h2 { font-size:16px; margin:4px 0; }
 
 /* ---------- SPOTIFY ---------- */
-.spotify-wrapper {
-  position: relative;
-  width: 100%;
-  padding-top: 80px; /* compact player */
-}
-.spotify-wrapper iframe {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-}
+.spotify-player { text-align:center; }
 
 /* ---------- POMODORO ---------- */
 .pomodoro-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
 }
-.timer-display {
-  font-size: 28px;
-}
-button {
-  padding: 5px 8px;
-  cursor: pointer;
-}
+.timer-display { font-size:28px; }
 
 /* ---------- AGENDA ---------- */
 .agenda-list {
-  overflow-y: auto;
-  max-height: 160px;
-  font-size: 12px;
+  max-height:160px;
+  overflow-y:auto;
+  font-size:12px;
 }
+
 .next-meeting {
-  background: #2ecc71;
-  color: white;
-  padding: 8px;
-  border-radius: 6px;
-  font-size: 12px;
+  background:#2ecc71;
+  color:white;
+  padding:8px;
+  border-radius:6px;
 }
 
 /* ---------- TODO ---------- */
-.todo-input {
-  display: flex;
-  gap: 5px;
-}
-.todo-input input {
-  flex: 1;
-}
 .todo-list {
-  overflow-y: auto;
-  max-height: 160px;
-  font-size: 12px;
-  list-style: none;
-  padding: 0;
+  list-style:none;
+  padding:0;
+  max-height:160px;
+  overflow-y:auto;
+  font-size:12px;
 }
-.todo-list li {
-  display: flex;
-  justify-content: space-between;
-  padding: 6px;
-}
-.done {
-  text-decoration: line-through;
-  opacity: 0.6;
-}
+
+.done { text-decoration:line-through; opacity:0.6; }
 
 </style>
 </head>
@@ -119,20 +84,23 @@ button {
 
 <div class="dashboard">
 
-  <!-- COLUMN 1: Spotify + Pomodoro -->
+  <!-- COLUMN 1 -->
   <div class="column">
-    
+
     <div>
       <h2>🎧 Music</h2>
-      <div class="spotify-wrapper">
-        <iframe id="spotifyPlayer"></iframe>
+      <div class="spotify-player">
+        <div id="trackInfo">Not connected</div>
+        <button onclick="previousTrack()">⏮</button>
+        <button onclick="togglePlay()">▶</button>
+        <button onclick="nextTrack()">⏭</button>
       </div>
     </div>
 
     <div>
       <h2>🍅 Timer</h2>
       <div class="pomodoro-row">
-        <div class="timer-display" id="timer">25:00</div>
+        <div id="timer">25:00</div>
         <div>
           <button onclick="startTimer()">▶</button>
           <button onclick="pauseTimer()">⏸</button>
@@ -143,137 +111,168 @@ button {
 
   </div>
 
-  <!-- COLUMN 2: Agenda -->
+  <!-- COLUMN 2 -->
   <div class="column">
-
     <div>
       <h2>⏭ Next</h2>
-      <div id="nextMeeting" class="next-meeting">Loading...</div>
+      <div id="nextMeeting">Loading...</div>
     </div>
 
     <div>
       <h2>📅 Agenda</h2>
       <div id="agendaList" class="agenda-list"></div>
     </div>
-
   </div>
 
-  <!-- COLUMN 3: TODO -->
+  <!-- COLUMN 3 -->
   <div class="column">
-
-    <div>
-      <h2>✅ To‑Do</h2>
-      <div class="todo-input">
-        <input id="newTodo" placeholder="Add task">
-        <button onclick="addTodo()">+</button>
-      </div>
-    </div>
-
-    <ul id="todoList" class="todo-list"></ul>
-
+    <h2>✅ To‑Do</h2>
+    <input id="newTodo" placeholder="Add task">
+    <button onclick="addTodo()">+</button>
+    <ul id="todoList"></ul>
   </div>
 
 </div>
 
+<!-- Spotify SDK -->
+<script src="https://sdk.scdn.co/spotify-player.js"></script>
+
 <script>
 
 /* ---------- LOAD YAML ---------- */
-async function loadYAML() {
+async function loadYAML(){
   const res = await fetch('data.yaml');
   const text = await res.text();
   const data = jsyaml.load(text);
-
   renderDashboard(data);
 }
 
-/* ---------- RENDER DASHBOARD ---------- */
-function renderDashboard(data) {
-
-  /* Spotify */
-  document.getElementById('spotifyPlayer').src =
-    `https://open.spotify.com/embed/${data.spotify.type}/${data.spotify.id}`;
-
-  /* Pomodoro */
-  if (data.pomodoro) initPomodoro(data.pomodoro);
-
-  /* Todo */
-  if (data.todo) initTodo(data.todo);
-
-  /* Calendar */
-  if (data.calendar?.enableAgenda) fetchAgenda();
+/* ---------- RENDER ---------- */
+function renderDashboard(data){
+  initSpotify(data.spotify);
+  initPomodoro(data.pomodoro);
+  initTodo(data.todo);
+  if(data.calendar?.enableAgenda) fetchAgenda();
 }
+
+/* ---------- SPOTIFY ---------- */
+let player, device_id, accessToken;
+
+function getSpotifyToken(clientId){
+  const params = new URLSearchParams({
+    response_type:"token",
+    client_id:clientId,
+    scope:"streaming user-read-email user-modify-playback-state",
+    redirect_uri:window.location.href
+  });
+
+  window.location = "https://accounts.spotify.com/authorize?" + params.toString();
+}
+
+function initSpotify(cfg){
+
+  // Get token from URL
+  const hash = window.location.hash;
+  if(hash){
+    accessToken = new URLSearchParams(hash.substring(1)).get("access_token");
+    window.history.replaceState({}, document.title, "/");
+  }
+
+  if(!accessToken){
+    getSpotifyToken(cfg.clientId);
+    return;
+  }
+
+}
+
+/* Spotify ready */
+window.onSpotifyWebPlaybackSDKReady = () => {
+
+  player = new Spotify.Player({
+    name:"Dashboard Player",
+    getOAuthToken:cb => cb(accessToken)
+  });
+
+  player.addListener('ready', data => {
+    device_id = data.device_id;
+  });
+
+  player.addListener('player_state_changed', state => {
+    if(!state) return;
+    const track = state.track_window.current_track;
+    document.getElementById("trackInfo").textContent =
+      track.name + " - " + track.artists[0].name;
+  });
+
+  player.connect();
+};
+
+/* Playback */
+function playPlaylist(id){
+  fetch(`https://api.spotify.com/v1/me/player/play?device_id=${device_id}`, {
+    method:"PUT",
+    headers:{
+      Authorization:`Bearer ${accessToken}`,
+      "Content-Type":"application/json"
+    },
+    body: JSON.stringify({context_uri:`spotify:playlist:${id}`})
+  });
+}
+
+function togglePlay(){ player.togglePlay(); }
+function nextTrack(){ player.nextTrack(); }
+function previousTrack(){ player.previousTrack(); }
 
 /* ---------- POMODORO ---------- */
-let timer, timeLeft, config;
+let timeLeft, timer;
 
-function initPomodoro(cfg) {
-  config = cfg;
+function initPomodoro(cfg){
   timeLeft = cfg.work * 60;
-  updateDisplay();
+  updateTimer();
 }
 
-function updateDisplay() {
+function updateTimer(){
   let m = Math.floor(timeLeft/60);
   let s = timeLeft%60;
   document.getElementById('timer').textContent =
     `${m}:${String(s).padStart(2,'0')}`;
 }
 
-function startTimer() {
-  if (timer) return;
-  timer = setInterval(() => {
+function startTimer(){
+  if(timer) return;
+  timer = setInterval(()=>{
     timeLeft--;
-    if (timeLeft <= 0) resetTimer();
-    updateDisplay();
-  }, 1000);
+    if(timeLeft<=0) resetTimer();
+    updateTimer();
+  },1000);
 }
 
-function pauseTimer() {
-  clearInterval(timer);
-  timer = null;
-}
-
-function resetTimer() {
-  pauseTimer();
-  timeLeft = config.work * 60;
-  updateDisplay();
-}
+function pauseTimer(){ clearInterval(timer); timer=null; }
+function resetTimer(){ pauseTimer(); timeLeft=25*60; updateTimer(); }
 
 /* ---------- TODO ---------- */
-let todos = [];
+let todos=[];
 
-function initTodo(yamlTodos) {
-  todos = yamlTodos;
+function initTodo(list){
+  todos = list;
   renderTodos();
 }
 
-function renderTodos() {
-  const list = document.getElementById('todoList');
-  list.innerHTML = '';
-
+function renderTodos(){
+  const el = document.getElementById('todoList');
+  el.innerHTML='';
   todos.forEach((t,i)=>{
-    const li = document.createElement('li');
-    if (t.done) li.classList.add('done');
-
-    li.innerHTML = `
-      <span onclick="toggleTodo(${i})">${t.text}</span>
-      <button onclick="deleteTodo(${i})">X</button>
-    `;
-    list.appendChild(li);
+    const li=document.createElement('li');
+    if(t.done) li.classList.add('done');
+    li.innerHTML=`${t.text} <button onclick="deleteTodo(${i})">X</button>`;
+    el.appendChild(li);
   });
 }
 
-function addTodo() {
+function addTodo(){
   const input = document.getElementById('newTodo');
-  if (!input.value) return;
-
-  todos.push({text:input.value, done:false});
+  todos.push({text:input.value,done:false});
   input.value='';
-  renderTodos();
-}
-
-function toggleTodo(i){
-  todos[i].done = !todos[i].done;
   renderTodos();
 }
 
@@ -282,77 +281,53 @@ function deleteTodo(i){
   renderTodos();
 }
 
-/* ---------- MICROSOFT LOGIN ---------- */
+/* ---------- OUTLOOK ---------- */
 const msalInstance = new msal.PublicClientApplication({
-  auth: {
-    clientId: "YOUR_CLIENT_ID", // replace
-    redirectUri: window.location.origin
+  auth:{
+    clientId:"YOUR_MS_CLIENT_ID",
+    redirectUri:window.location.origin
   }
 });
 
-async function login() {
-  const res = await msalInstance.loginPopup({
-    scopes:["Calendars.Read"]
-  });
+async function login(){
+  const res = await msalInstance.loginPopup({scopes:["Calendars.Read"]});
   return res.accessToken;
 }
 
-/* ---------- FETCH AGENDA ---------- */
-async function fetchAgenda() {
+async function fetchAgenda(){
   const token = await login();
 
-  const start = new Date();
-  start.setHours(0,0,0,0);
+  const start = new Date(); start.setHours(0,0,0,0);
+  const end = new Date(); end.setHours(23,59,59,999);
 
-  const end = new Date();
-  end.setHours(23,59,59,999);
-
-  const url =
-    `https://graph.microsoft.com/v1.0/me/calendarview` +
-    `?startDateTime=${start.toISOString()}` +
-    `&endDateTime=${end.toISOString()}`;
-
-  const res = await fetch(url, {
-    headers:{ Authorization:`Bearer ${token}` }
-  });
+  const res = await fetch(
+    `https://graph.microsoft.com/v1.0/me/calendarview?startDateTime=${start.toISOString()}&endDateTime=${end.toISOString()}`,
+    { headers:{Authorization:`Bearer ${token}`} }
+  );
 
   const data = await res.json();
   renderAgenda(data.value);
 }
 
-/* ---------- RENDER AGENDA ---------- */
-function renderAgenda(events) {
+function renderAgenda(events){
+  const agenda = document.getElementById('agendaList');
+  const nextBox = document.getElementById('nextMeeting');
 
-  const agenda = document.getElementById("agendaList");
-  const nextBox = document.getElementById("nextMeeting");
+  agenda.innerHTML="";
+  let now=new Date(), next=null;
 
-  agenda.innerHTML = "";
-  let now = new Date();
-  let next = null;
+  events.sort((a,b)=>new Date(a.start.dateTime)-new Date(b.start.dateTime))
+  .forEach(e=>{
+    const s = new Date(e.start.dateTime);
+    agenda.innerHTML += `<div>${e.subject} (${s.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})})</div>`;
+    if(!next && s>now) next=e;
+  });
 
-  events
-    .sort((a,b)=>new Date(a.start.dateTime)-new Date(b.start.dateTime))
-    .forEach(e => {
-
-      const start = new Date(e.start.dateTime);
-      const end = new Date(e.end.dateTime);
-
-      agenda.innerHTML += `
-        <div>
-          <strong>${e.subject}</strong><br>
-          ${start.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}
-        </div>
-      `;
-
-      if (!next && start > now) next = e;
-    });
-
-  if (next){
+  if(next){
     const s = new Date(next.start.dateTime);
-    nextBox.innerHTML =
-      `${next.subject}<br>${s.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`;
+    nextBox.textContent = `${next.subject} at ${s.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`;
   } else {
-    nextBox.innerHTML = "Free 🎉";
+    nextBox.textContent = "Free 🎉";
   }
 }
 
