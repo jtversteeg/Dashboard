@@ -1,67 +1,145 @@
-// ✅ Destructure React hooks from global React object
-const { useState, useEffect } = React;
+import { useEffect, useState, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
-/**
- * ✅ Pomodoro component
- * - 25-minute timer (1500 seconds)
- * - Start / Pause toggle
- * - Reset button
- */
-function Pomodoro() {
-  const [seconds, setSeconds] = useState(1500);
+const settings = {
+  focus: 25 * 60,
+  shortBreak: 5 * 60,
+  longBreak: 15 * 60,
+  cyclesBeforeLong: 4
+};
+
+export default function PomodoroApp() {
+  const [mode, setMode] = useState("FOCUS");
+  const [time, setTime] = useState(settings.focus);
+  const [cycleCount, setCycleCount] = useState(0);
   const [running, setRunning] = useState(false);
+  const [paused, setPaused] = useState(false);
 
-  // ✅ Timer logic
+  const intervalRef = useRef(null);
+
+  const formatTime = (t) => {
+    const m = Math.floor(t / 60).toString().padStart(2, "0");
+    const s = (t % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
+
+  const nextPhase = () => {
+    if (mode === "FOCUS") {
+      const newCount = cycleCount + 1;
+      setCycleCount(newCount);
+
+      if (newCount === settings.cyclesBeforeLong) {
+        setMode("LONG_BREAK");
+        setTime(settings.longBreak);
+        setCycleCount(0);
+      } else {
+        setMode("SHORT_BREAK");
+        setTime(settings.shortBreak);
+      }
+    } else {
+      setMode("FOCUS");
+      setTime(settings.focus);
+    }
+  };
+
   useEffect(() => {
-    let timer;
-
-    if (running) {
-      timer = setInterval(() => {
-        setSeconds(prev => (prev > 0 ? prev - 1 : 0));
+    if (running && !paused) {
+      intervalRef.current = setInterval(() => {
+        setTime((prev) => {
+          if (prev <= 1) {
+            nextPhase();
+            return 0;
+          }
+          return prev - 1;
+        });
       }, 1000);
     }
 
-    // Cleanup when paused or component unmounts
-    return () => clearInterval(timer);
-  }, [running]);
+    return () => clearInterval(intervalRef.current);
+  }, [running, paused, mode]);
 
-  // ✅ Format time
-  const minutes = Math.floor(seconds / 60);
-  const secs = seconds % 60;
+  const handleStartPause = () => {
+    if (!running) {
+      setRunning(true);
+      setPaused(false);
+    } else {
+      setPaused((p) => !p);
+    }
+  };
 
-  return React.createElement(
-    'div',
-    { style: { textAlign: 'center', width: '100%' } },
+  const handleReset = () => {
+    if (running || paused) {
+      if (mode === "FOCUS") setTime(settings.focus);
+      if (mode === "SHORT_BREAK") setTime(settings.shortBreak);
+      if (mode === "LONG_BREAK") setTime(settings.longBreak);
+      setRunning(false);
+      setPaused(false);
+    } else {
+      setMode("FOCUS");
+      setTime(settings.focus);
+      setCycleCount(0);
+      setRunning(false);
+      setPaused(false);
+    }
+  };
 
-    React.createElement('h3', null, 'Pomodoro'),
+  const progress = (() => {
+    let total;
+    if (mode === "FOCUS") total = settings.focus;
+    if (mode === "SHORT_BREAK") total = settings.shortBreak;
+    if (mode === "LONG_BREAK") total = settings.longBreak;
+    return ((total - time) / total) * 100;
+  })();
 
-    React.createElement(
-      'div',
-      { style: { fontSize: '28px' } },
-      `${minutes}:${secs.toString().padStart(2, '0')}`
-    ),
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+      <Card className="w-80 text-center shadow-xl rounded-2xl">
+        <CardContent className="p-6 space-y-4">
+          <h2 className="text-xl font-semibold">{mode.replace("_", " ")}</h2>
 
-    // ✅ Start / Pause
-    React.createElement(
-      'button',
-      { onClick: () => setRunning(!running) },
-      running ? 'Pause' : 'Start'
-    ),
+          <div className="relative w-40 h-40 mx-auto">
+            <svg className="transform -rotate-90 w-full h-full">
+              <circle
+                cx="80"
+                cy="80"
+                r="70"
+                stroke="#e5e7eb"
+                strokeWidth="10"
+                fill="none"
+              />
+              <circle
+                cx="80"
+                cy="80"
+                r="70"
+                stroke="#3b82f6"
+                strokeWidth="10"
+                fill="none"
+                strokeDasharray="440"
+                strokeDashoffset={440 - (progress / 100) * 440}
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center text-2xl font-bold">
+              {formatTime(time)}
+            </div>
+          </div>
 
-    // ✅ Reset
-    React.createElement(
-      'button',
-      {
-        onClick: () => {
-          setSeconds(1500);
-          setRunning(false);
-        }
-      },
-      'Reset'
-    )
+          {paused && <p className="text-gray-500">Paused</p>}
+
+          <div className="flex gap-2 justify-center">
+            <Button onClick={handleStartPause}>
+              {!running ? "Start" : paused ? "Start" : "Pause"}
+            </Button>
+            <Button variant="secondary" onClick={handleReset}>
+              Reset
+            </Button>
+          </div>
+
+          <p className="text-sm text-gray-600">
+            Focus cycles: {cycleCount}
+          </p>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
-
-/* ✅ Mount React app into panel3 */
-ReactDOM.createRoot(document.getElementById("panel3"))
-  .render(React.createElement(Pomodoro));
